@@ -2,6 +2,7 @@
 using Parliament.Rdf.Serialization;
 using Procedure.Web.Extensions;
 using Procedure.Web.Models;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -67,22 +68,42 @@ namespace Procedure.Web.Controllers
                 StringBuilder builder = new StringBuilder("graph[fontname=\"calibri\"];node[fontname=\"calibri\"];edge[fontname=\"calibri\"];");
                 foreach (RouteItem route in routes)
                 {
+                    string edgeStyle = null;
+                    string label = null;
                     if (route.RouteKind == RouteType.Causes)
                     {
-                        builder.Append($"\"{route.FromStepName.ProcessName()}({route.FromStepHouseName})\"->\"{route.ToStepName.ProcessName()}({route.ToStepHouseName})\"[label=\"Causes\"]; ");
+                        label = "Causes";
+                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
+                            edgeStyle = "style=dotted, color=black";
+                        else
+                            edgeStyle = "style=solid, color=black";
                     }
-                    if (route.RouteKind == RouteType.Allows)
+                    else if (route.RouteKind == RouteType.Allows)
                     {
-                        builder.Append($"edge [color=red];\"{route.FromStepName.ProcessName()}({route.FromStepHouseName})\"->\"{route.ToStepName.ProcessName()}({route.ToStepHouseName})\"[label=\"Allows\"];edge[color=black];");
+                        label = "Allows";
+                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
+                            edgeStyle = "style=dotted, color=red";
+                        else
+                            edgeStyle = "style=solid, color=red";
                     }
-                    if (route.RouteKind == RouteType.Precludes)
+                    else if (route.RouteKind == RouteType.Precludes)
                     {
-                        builder.Append($"edge [color=blue];\"{route.FromStepName.ProcessName()}({route.FromStepHouseName})\"->\"{route.ToStepName.ProcessName()}({route.ToStepHouseName})\"[label=\"Precludes\"];edge[color=black];");
+                        label = "Precludes";
+                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
+                            edgeStyle = "style=dotted, color=blue";
+                        else
+                            edgeStyle = "style=solid, color=blue";
                     }
-                    if (route.RouteKind == RouteType.Requires)
+                    else if (route.RouteKind == RouteType.Requires)
                     {
-                        builder.Append($"edge [color=yellow];\"{route.FromStepName.ProcessName()}({route.FromStepHouseName})\"->\"{route.ToStepName.ProcessName()}({route.ToStepHouseName})\"[label=\"Requires\"];edge[color=black];");
+                        label = "Requires";
+                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
+                            edgeStyle = "style=dotted, color=yellow";
+                        else
+                            edgeStyle = "style=solid, color=yellow";
                     }
+                    if (edgeStyle != null && label != null)
+                        builder.Append($"edge [{edgeStyle}];\"{route.FromStepName.ProcessName()}({route.FromStepHouseName})\"->\"{route.ToStepName.ProcessName()}({route.ToStepHouseName})\"[label=\"{label}\"];edge[style=solid, color=black];");
                 }
 
                 if(showLegend == true)

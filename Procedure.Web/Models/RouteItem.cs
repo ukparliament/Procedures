@@ -26,6 +26,8 @@ namespace Procedure.Web.Models
         public string ToStepHouseName { get; set; }
 
         public string RouteTypeName { get; set; }
+        public DateTimeOffset? StartDate { get; set; }
+        public DateTimeOffset? EndDate { get; set; }
 
         public RouteType RouteKind
         {
@@ -62,7 +64,7 @@ namespace Procedure.Web.Models
         public static string ListByProcedureSql = @"select pr.Id, pr.TripleStoreId, fs.Id as FromStepId,
 	            fs.ProcedureStepName as FromStepName, fs.TripleStoreId as FromStepTripleStoreId,
                 ts.Id as ToStepId, ts.ProcedureStepName as ToStepName, ts.TripleStoreId as ToStepTripleStoreId,
-	            rt.ProcedureRouteTypeName as RouteTypeName from ProcedureRoute pr
+	            rt.ProcedureRouteTypeName as RouteTypeName, pr.StartDate as StartDate, pr.EndDate as EndDate from ProcedureRoute pr
             join ProcedureRouteProcedure prp on prp.ProcedureRouteId=pr.Id
             join ProcedureStep fs on fs.Id=pr.FromProcedureStepId
             join ProcedureStep ts on ts.Id=pr.ToProcedureStepId
