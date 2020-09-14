@@ -57,11 +57,36 @@ namespace Procedure.Web.Controllers
                 int[] actualizedStepIds = businessItemList
                 .SelectMany(bi => bi.ActualisesProcedureStep.Select(s => s.StepId))
                 .ToArray();
+                BusinessItemStep[] actualizedSteps = businessItemList
+                .SelectMany(bi => bi.ActualisesProcedureStep).Distinct()
+                .ToArray();
 
                 List<RouteItem> routes = getAllRoutes(procedureId);
 
-                List<RouteItem> routesWithActualizedFromSteps = routes.Where(route => actualizedStepIds.Contains(route.FromStepId)).ToList();
+                List<RouteItem> routesWithActualizedFromSteps = new List<RouteItem>();
+                foreach (var route in routes.Where(route => actualizedStepIds.Contains(route.FromStepId)).ToList())
+                {
+                    var businessItemDates = businessItemList.Where(bi => bi.ActualisesProcedureStep.Select(s => s.StepId).Contains(route.FromStepId)).Select(bi=>bi.Date);
+                    if (businessItemDates.Any())
+                    {
+                        if (route.StartDate == null && route.EndDate == null)
+                            routesWithActualizedFromSteps.Add(route);
+                        else if (route.EndDate == null && 
+                            route.StartDate != null && route.StartDate <= businessItemDates.Max())
+                            routesWithActualizedFromSteps.Add(route);
+                        else if (route.StartDate == null &&
+                            route.EndDate != null && route.EndDate >= businessItemDates.Min())
+                            routesWithActualizedFromSteps.Add(route);
+                        else if (route.StartDate != null && route.StartDate <= businessItemDates.Max() &&
+                            route.EndDate != null && route.EndDate >= businessItemDates.Min() &&
+                            route.StartDate >= businessItemDates.Min() && route.EndDate <= businessItemDates.Max())
+                            routesWithActualizedFromSteps.Add(route);
+                    }
+                }
+                
                 List<RouteItem> routesWithActualizedToSteps = routes.Where(route => actualizedStepIds.Contains(route.ToStepId)).ToList();
+                List<BusinessItemStep> orphanSteps = actualizedSteps.Where(step => !routesWithActualizedFromSteps.Select(route => route.FromStepId).Contains(step.StepId) &&
+                                                        !routes.Select(route => route.ToStepId).Contains(step.StepId)).ToList();
 
                 List<RouteItem> nonSelfReferencedRoutesWithBothEndsActualized = routesWithActualizedFromSteps.Where(route => actualizedStepIds.Contains(route.ToStepId) && actualizedStepIds.Contains(route.FromStepId) && route.FromStepId != route.ToStepId).ToList();
                 List<RouteItem> precludeOrRequireRoutes = routes.Where(route => route.RouteKind == RouteType.Precludes || route.RouteKind == RouteType.Requires).ToList();
@@ -115,6 +140,11 @@ namespace Procedure.Web.Controllers
                     {
                         builder.Replace($"\"{route.ToStepName.ProcessName()}\" [style=filled,fillcolor=white,color=orange,peripheries=2];", $"\"{route.FromStepName.ProcessName()}\" [style=filled,color=lemonchiffon2];");
                     }
+                }
+
+                foreach(var step in orphanSteps)
+                {
+                    builder.Append($"\"{step.StepName.ProcessName()}\" [style=filled,color=gray];");
                 }
 
                 builder.Append($"labelloc=\"t\"; fontsize = \"25\"; label = \"{workPackage.Title} \\n Subject to: {workPackage.ProcedureName}\"");
