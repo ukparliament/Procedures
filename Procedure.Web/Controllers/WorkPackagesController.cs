@@ -1,5 +1,6 @@
 ﻿using Procedure.Web.Extensions;
 using Procedure.Web.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -69,18 +70,21 @@ namespace Procedure.Web.Controllers
                     var businessItemDates = businessItemList.Where(bi => bi.ActualisesProcedureStep.Select(s => s.StepId).Contains(route.FromStepId)).Select(bi=>bi.Date);
                     if (businessItemDates.Any())
                     {
-                        if (route.StartDate == null && route.EndDate == null)
-                            routesWithActualizedFromSteps.Add(route);
-                        else if (route.EndDate == null && 
-                            route.StartDate != null && route.StartDate <= businessItemDates.Max())
-                            routesWithActualizedFromSteps.Add(route);
-                        else if (route.StartDate == null &&
-                            route.EndDate != null && route.EndDate >= businessItemDates.Min())
-                            routesWithActualizedFromSteps.Add(route);
-                        else if (route.StartDate != null && route.StartDate <= businessItemDates.Max() &&
-                            route.EndDate != null && route.EndDate >= businessItemDates.Min() &&
-                            route.StartDate >= businessItemDates.Min() && route.EndDate <= businessItemDates.Max())
-                            routesWithActualizedFromSteps.Add(route);
+                        var busItemMaxDate = businessItemDates.Max();
+                        if (busItemMaxDate == null)
+                            busItemMaxDate = DateTime.MaxValue;
+                        var busItemMinDate = businessItemDates.Min();
+                        if (busItemMinDate == null)
+                            busItemMinDate = DateTime.MinValue;
+                        var routeStartDate = route.StartDate;
+                        if (routeStartDate == null)
+                            routeStartDate = DateTime.MinValue;
+                        var routeEndDate = route.EndDate;
+                        if (routeEndDate == null)
+                            routeEndDate = DateTime.MaxValue;
+
+                        if (routeStartDate <= busItemMaxDate && routeEndDate >= busItemMinDate && routeStartDate >= busItemMinDate && routeEndDate <= busItemMaxDate)
+                                routesWithActualizedFromSteps.Add(route);
                     }
                 }
                 
