@@ -63,28 +63,40 @@ namespace Procedure.Web.Controllers
                 .ToArray();
 
                 List<RouteItem> routes = getAllRoutes(procedureId);
+                List<int> redAlertStepIds = new List<int>();
 
                 List<RouteItem> routesWithActualizedFromSteps = new List<RouteItem>();
                 foreach (var route in routes.Where(route => actualizedStepIds.Contains(route.FromStepId)).ToList())
                 {
-                    var businessItemDates = businessItemList.Where(bi => bi.ActualisesProcedureStep.Select(s => s.StepId).Contains(route.FromStepId)).Select(bi=>bi.Date);
-                    if (businessItemDates.Any())
-                    {
-                        var busItemMaxDate = businessItemDates.Max();
-                        if (busItemMaxDate == null)
-                            busItemMaxDate = DateTime.MaxValue;
-                        var busItemMinDate = businessItemDates.Min();
-                        if (busItemMinDate == null)
-                            busItemMinDate = DateTime.MinValue;
-                        var routeStartDate = route.StartDate;
-                        if (routeStartDate == null)
-                            routeStartDate = DateTime.MinValue;
-                        var routeEndDate = route.EndDate;
-                        if (routeEndDate == null)
-                            routeEndDate = DateTime.MaxValue;
+                    var routeStartDate = route.StartDate == null ? DateTime.MinValue : route.StartDate;
+                    var routeEndDate = route.EndDate == null ? DateTime.MaxValue : route.EndDate;
 
-                        if (routeStartDate <= busItemMaxDate && routeEndDate >= busItemMinDate && routeStartDate >= busItemMinDate && routeEndDate <= busItemMaxDate)
+                    var fromStepDates = businessItemList.Where(bi => bi.ActualisesProcedureStep.Select(s => s.StepId).Contains(route.FromStepId)).Select(bi=>bi.Date);
+                    var toStepDates = businessItemList.Where(bi => bi.ActualisesProcedureStep.Select(s => s.StepId).Contains(route.ToStepId)).Select(bi => bi.Date);
+                     if (fromStepDates.Any())
+                    {
+                        var fromStepMaxDate = fromStepDates.Max() == null ? DateTime.MaxValue : fromStepDates.Max();
+                        var fromStepMinDate = fromStepDates.Min() == null ? DateTime.MinValue : fromStepDates.Min();
+
+                        if (toStepDates.Any())
+                        {
+                            var toStepMaxDate = toStepDates.Max() == null ? DateTime.MaxValue : toStepDates.Max();
+                            var toStepMinDate = toStepDates.Min() == null ? DateTime.MinValue : toStepDates.Min();
+                            if (routeStartDate <= fromStepMaxDate && routeEndDate >= fromStepMinDate && routeStartDate <= toStepMaxDate && routeEndDate >= toStepMinDate)
+                            {
                                 routesWithActualizedFromSteps.Add(route);
+                                if (route.RouteKind == RouteType.Precludes)
+                                {
+                                    if (toStepMinDate > fromStepMaxDate)
+                                        redAlertStepIds.Add(route.ToStepId);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (routeStartDate <= fromStepMaxDate && routeEndDate >= fromStepMinDate && DateTime.Today <= routeEndDate)
+                                routesWithActualizedFromSteps.Add(route);
+                        }
                     }
                 }
                 
@@ -113,36 +125,61 @@ namespace Procedure.Web.Controllers
                     {
                         if (route.RouteKind == RouteType.Causes)
                         {
-                            builder.Append($"\"{route.FromStepName.ProcessName()}\" -> \"{route.ToStepName.ProcessName()}\" [label = \"Causes\"]; ");
+                            builder.Append($"\"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Causes\"]; ");
                         }
                         if (route.RouteKind == RouteType.Allows)
                         {
-                            builder.Append($"edge [color=red]; \"{route.FromStepName.ProcessName()}\" -> \"{route.ToStepName.ProcessName()}\" [label = \"Allows\"]; edge [color=black];");
+                            builder.Append($"edge [color=red]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Allows\"]; edge [color=black];");
                         }
                         if (route.RouteKind == RouteType.Precludes)
                         {
-                            builder.Append($"edge [color=blue]; \"{route.FromStepName.ProcessName()}\" -> \"{route.ToStepName.ProcessName()}\" [label = \"Precludes\"]; edge [color=black];");
+                            builder.Append($"edge [color=blue]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Precludes\"]; edge [color=black];");
                         }
                         if (route.RouteKind == RouteType.Requires)
                         {
-                            builder.Append($"edge [color=yellow]; \"{route.FromStepName.ProcessName()}\" -> \"{route.ToStepName.ProcessName()}\" [label = \"Requires\"]; edge [color=black];");
+                            builder.Append($"edge [color=yellow]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Requires\"]; edge [color=black];");
                         }
                     }
                     if (!blackOutFromStepIds.Except(unBlackOut).Contains(route.FromStepId) && !blackOutToStepsIds.Contains(route.ToStepId) && !new[] { RouteType.Precludes, RouteType.Requires }.Contains(route.RouteKind))
                     {
-                        builder.Append($"\"{route.ToStepName.ProcessName()}\" [style=filled,fillcolor=white,color=orange,peripheries=2];");
+                        string str = $"\"{route.ToStepId}\" [label=\"{route.ToStepName.ProcessName()}\",style=filled,fillcolor=white,color=orange,peripheries=2];";
+                        builderAppendIfNotFound(builder, str);
                     }
                     if (actualizedStepIds.Contains(route.FromStepId))
                     {
-                        builder.Append($"\"{route.FromStepName.ProcessName()}\" [style=filled,color=gray];");
+                        string str = $"\"{route.FromStepId}\" [label=\"{route.FromStepName.ProcessName()}\",style=filled,color=gray];";
+                        builderAppendIfNotFound(builder, str);
                     }
-                    if (actualizedStepIds.Contains(route.FromStepId) && canActualizeSelfAgainStepIds.Contains(route.FromStepId))
-                    {
-                        builder.Replace($"\"{route.FromStepName.ProcessName()}\" [style=filled,color=gray];", $"\"{route.FromStepName.ProcessName()}\" [style=filled,color=lemonchiffon2];");
-                    }
+
                     if (actualizedStepIds.Contains(route.ToStepId) && canActualizeSelfAgainStepIds.Contains(route.ToStepId))
                     {
-                        builder.Replace($"\"{route.ToStepName.ProcessName()}\" [style=filled,fillcolor=white,color=orange,peripheries=2];", $"\"{route.FromStepName.ProcessName()}\" [style=filled,color=lemonchiffon2];");
+                        string findString = $"\"{route.ToStepId}\" [label=\"{route.ToStepName.ProcessName()}\",style=filled,fillcolor=white,color=orange,peripheries=2];";
+                        string replaceString = $"\"{route.ToStepId}\" [label=\"{route.ToStepName.ProcessName()}\",style=filled,color=lemonchiffon2];";
+
+                        builderReplaceIfNotFound(builder, findString, replaceString);
+                    }
+
+                    if (actualizedStepIds.Contains(route.FromStepId) && canActualizeSelfAgainStepIds.Contains(route.FromStepId))
+                    {
+                        string findString = $"\"{route.FromStepId}\" [label=\"{route.FromStepName.ProcessName()}\",style=filled,color=gray];";
+                        string replaceString = $"\"{route.FromStepId}\" [label=\"{route.FromStepName.ProcessName()}\",style=filled,color=lemonchiffon2];";
+
+                        builderReplaceIfNotFound(builder, findString, replaceString);
+                    }
+
+                    if (redAlertStepIds.Contains(route.ToStepId))
+                    {
+                        string findString = $"\"{route.ToStepId}\" [label=\"{route.ToStepName.ProcessName()}\",style=filled,color=gray];";
+                        string replaceString = $"\"{route.ToStepId}\" [label=\"{route.ToStepName.ProcessName()}\",style=filled,color=red];";
+
+                        builderReplaceIfNotFound(builder, findString, replaceString);
+                    }
+                    if (redAlertStepIds.Contains(route.FromStepId))
+                    {
+                        string findString = $"\"{route.FromStepId}\" [label=\"{route.FromStepName.ProcessName()}\",style=filled,color=gray];";
+                        string replaceString = $"\"{route.FromStepId}\" [label=\"{route.FromStepName.ProcessName()}\",style=filled,color=red];";
+
+                        builderReplaceIfNotFound(builder, findString, replaceString);
                     }
                 }
 
@@ -181,6 +218,23 @@ namespace Procedure.Web.Controllers
             }
         }
 
+        private void builderAppendIfNotFound (StringBuilder builder, string str)
+        {
+            if (!builder.ToString().Contains(str))
+                builder.Append(str);
+        }
+        private void builderReplaceIfNotFound(StringBuilder builder, string findString, string replaceString)
+        {
+            if (builder.ToString().Contains(findString))
+            {
+                builder.Replace(findString, replaceString);
+            }
+            else
+            {
+                if (!builder.ToString().Contains(replaceString))
+                    builder.Append(replaceString);
+            }
+        }
         private List<WorkPackageRouteTree> giveMeTheTree(int workPackageId, int procedureId)
         {
             List<WorkPackageRouteTree> result = new List<WorkPackageRouteTree>();
