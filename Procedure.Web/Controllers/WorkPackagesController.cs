@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Web.Mvc;
 
 namespace Procedure.Web.Controllers
@@ -188,7 +189,7 @@ namespace Procedure.Web.Controllers
                     builder.Append($"\"{step.StepName.ProcessName()}\" [style=filled,color=gray];");
                 }
 
-                builder.Append($"labelloc=\"t\"; fontsize = \"25\"; label = \"{workPackage.Title} \\n Subject to: {workPackage.ProcedureName}\"");
+                builder.Append($"labelloc=\"t\"; fontsize = \"25\"; label = \"{HttpUtility.HtmlEncode(workPackage.Title)} \\n Subject to: {workPackage.ProcedureName}\"");
 
                 if (showLegend == true)
                 {
