@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Web;
 using System.Web.Mvc;
 using VDS.RDF;
 
@@ -95,7 +96,7 @@ namespace Procedure.Web.Controllers
 
             if (workPackageableThing != null && procedure != null)
             {
-                builder.Append($"labelloc=\"t\"; fontsize = \"25\"; label = \"{workPackageableThing.Object.ToString()} \\n Subject to: {procedure.Object.ToString()}\"");
+                builder.Append($"labelloc=\"t\"; fontsize = \"25\"; label = \"{HttpUtility.HtmlEncode(workPackageableThing.Object.ToString())} \\n Subject to: {procedure.Object.ToString()}\"");
             }
 
             builder.Append("}");

@@ -17,6 +17,7 @@ namespace Procedure.Web.Models
         public string Weblink { get; set; } 
 
         public string LayingBodyName { get; set; }
+        public DateTimeOffset? LayingDate { get; set; }
 
         public string AllData()
         {
@@ -38,7 +39,7 @@ namespace Procedure.Web.Models
 
         public static string ListByWorkPackageSql = @"select bi.Id, bi.TripleStoreId, wp.Id as WorkPackageId,
                 coalesce(si.ProcedureStatutoryInstrumentName, nsi.ProcedureProposedNegativeStatutoryInstrumentName, t.ProcedureTreatyName) as WorkPackageName,
-                bi.BusinessItemDate as [Date], bi.WebLink, lb.LayingBodyName
+                bi.BusinessItemDate as [Date], bi.WebLink, lb.LayingBodyName, l.LayingDate
             from ProcedureBusinessItem bi
             join ProcedureWorkPackagedThing wp on wp.Id=bi.ProcedureWorkPackageId
             left join ProcedureStatutoryInstrument si on si.Id=wp.Id

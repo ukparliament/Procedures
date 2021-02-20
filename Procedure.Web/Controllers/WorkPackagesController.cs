@@ -48,7 +48,398 @@ namespace Procedure.Web.Controllers
             return Content(GiveMeDotString(id, showLegend: false), "text/plain");
         }
 
+        private StepCurrentState SetStepCurrentState(int StepTypeId, int StepId, int[] actualizedStepIds, List<BusinessItem> businessItemList)
+        {
+            StepCurrentState stepCurrentState;
+            if (StepTypeId == 1)
+            {
+                if (actualizedStepIds.Contains(StepId))
+                {
+                    var bItems = businessItemList.Where(bi => bi.ActualisesProcedureStep.Select(step => step.StepId).Contains(StepId));
+                    if (bItems.Count() == 1 && bItems.First().Date == null && bItems.First().LayingDate == null)
+                    {
+                        stepCurrentState = StepCurrentState.WithoutDate;
+                    }
+                    else
+                    {
+                        stepCurrentState = StepCurrentState.ScheduledToHappen;
+                        foreach (var bItem in bItems)
+                        {
+                            if ((bItem.Date != null && bItem.Date <= DateTime.Today) || (bItem.Date == null && bItem.LayingDate <= DateTime.Today))
+                            {
+                                stepCurrentState = StepCurrentState.Happened;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    stepCurrentState = StepCurrentState.NotActualised;
+                }
+            }
+            else
+            {
+                stepCurrentState = StepCurrentState.NonBusinessStep;
+            }
+            return stepCurrentState;
+        }
+
+        private void SetRouteStepState(IEnumerable<RouteItem> routes, int[] actualizedStepIds, List<BusinessItem> businessItemList)
+        {
+            foreach (RouteItem route in routes)
+            {
+                route.FromStepCurrentState = SetStepCurrentState(route.FromStepTypeId, route.FromStepId, actualizedStepIds, businessItemList);
+                route.ToStepCurrentState = SetStepCurrentState(route.ToStepTypeId, route.ToStepId, actualizedStepIds, businessItemList);
+                route.FromStepPotentialState = StepPotentialState.UnParsed;
+                route.ToStepPotentialState = StepPotentialState.UnParsed;
+            }
+        }
+
+        private void PopulateRouteAndStepState(IEnumerable<RouteItem> routes, ref int depth)
+        {
+            bool ChangeMade = false;
+            foreach (var route in routes)
+            {
+                RouteStatus newRouteStatus = route.RouteStatus;
+                StepPotentialState newToStepStatus = route.ToStepPotentialState;
+
+                if (route.FromStepTypeId == 1) // business step
+                {
+                    if (route.FromStepCurrentState == StepCurrentState.Happened)
+                    {
+                        newRouteStatus = RouteStatus.True;
+                    }
+                    else if (route.FromStepCurrentState == StepCurrentState.ScheduledToHappen || route.FromStepCurrentState == StepCurrentState.WithoutDate)
+                    {
+                        newRouteStatus = RouteStatus.Null;
+                    }
+                    else if (route.FromStepCurrentState == StepCurrentState.NotActualised)
+                    {
+                        newRouteStatus = RouteStatus.Null;
+                    }
+                }
+                else if (route.FromStepTypeId == 4) // AND step
+                {
+                    var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
+                    if (inputRoutes.Count() == 2)
+                    {
+                        if (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.True)
+                        {
+                            newRouteStatus = RouteStatus.True;
+                        }
+                        else if ((inputRoutes[0].RouteStatus == RouteStatus.False && inputRoutes[1].RouteStatus == RouteStatus.True) ||
+                            (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.False) ||
+                            (inputRoutes[0].RouteStatus == RouteStatus.False && inputRoutes[1].RouteStatus == RouteStatus.False))
+                        {
+                            newRouteStatus = RouteStatus.False;
+                        }
+                        else if ((inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.Null) ||
+                            (inputRoutes[0].RouteStatus == RouteStatus.Null && inputRoutes[1].RouteStatus == RouteStatus.True))
+                        {
+                            newRouteStatus = RouteStatus.True;
+                        }
+                        else if ((inputRoutes[0].RouteStatus == RouteStatus.False && inputRoutes[1].RouteStatus == RouteStatus.Null) ||
+                            (inputRoutes[0].RouteStatus == RouteStatus.Null && inputRoutes[1].RouteStatus == RouteStatus.False))
+                        {
+                            newRouteStatus = RouteStatus.False;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.Null && inputRoutes[1].RouteStatus == RouteStatus.Null)
+                        {
+                            newRouteStatus = RouteStatus.Null;
+                        }
+                    }
+
+                }
+                else if (route.FromStepTypeId == 5) // OR step
+                {
+                    var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
+                    if (inputRoutes.Count() == 2)
+                    {
+                        if (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.True)
+                        {
+                            newRouteStatus = RouteStatus.True;
+                        }
+                        else if ((inputRoutes[0].RouteStatus == RouteStatus.False && inputRoutes[1].RouteStatus == RouteStatus.True) ||
+                            (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.False))
+                        {
+                            newRouteStatus = RouteStatus.True;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.False && inputRoutes[1].RouteStatus == RouteStatus.False)
+                        {
+                            newRouteStatus = RouteStatus.False;
+                        }
+                        else if ((inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.Null) ||
+                            (inputRoutes[0].RouteStatus == RouteStatus.Null && inputRoutes[1].RouteStatus == RouteStatus.True))
+                        {
+                            newRouteStatus = RouteStatus.True;
+                        }
+                        else if ((inputRoutes[0].RouteStatus == RouteStatus.False && inputRoutes[1].RouteStatus == RouteStatus.Null) ||
+                            (inputRoutes[0].RouteStatus == RouteStatus.Null && inputRoutes[1].RouteStatus == RouteStatus.False))
+                        {
+                            newRouteStatus = RouteStatus.False;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.Null && inputRoutes[1].RouteStatus == RouteStatus.Null)
+                        {
+                            newRouteStatus = RouteStatus.Null;
+                        }
+                    }
+                }
+                else if (route.FromStepTypeId == 3) // NOT step
+                {
+                    var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
+                    if (inputRoutes.Count() == 1)
+                    {
+                        if (inputRoutes[0].RouteStatus == RouteStatus.True)
+                        {
+                            newRouteStatus = RouteStatus.False;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.False)
+                        {
+                            newRouteStatus = RouteStatus.True;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.Null)
+                        {
+                            newRouteStatus = RouteStatus.Null;
+                        }
+                    }
+                }
+                else if (route.FromStepTypeId == 2) // Decision step
+                {
+                    var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
+                    if (inputRoutes.Count() == 1)
+                    {
+                        if (inputRoutes[0].RouteStatus == RouteStatus.True)
+                        {
+                            newRouteStatus = RouteStatus.Allows;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.False)
+                        {
+                            newRouteStatus = RouteStatus.False;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.Null)
+                        {
+                            newRouteStatus = RouteStatus.Null;
+                        }
+                    }
+                }
+                if (route.ToStepTypeId == 1)//business step
+                {
+                    if (route.RouteStatus == RouteStatus.True)
+                    {
+                        newToStepStatus = StepPotentialState.CausedToBeActualised;
+                    }
+                    else if (route.RouteStatus == RouteStatus.Allows)
+                    {
+                        newToStepStatus = StepPotentialState.AllowedToBeActualised;
+                    }
+                    else if (route.RouteStatus == RouteStatus.Null || route.RouteStatus == RouteStatus.False)
+                    {
+                        newToStepStatus = StepPotentialState.NotActualisable;
+                    }
+                }
+
+                if (newRouteStatus != route.RouteStatus)
+                {
+                    route.RouteStatus = newRouteStatus;
+                    ChangeMade = true;
+                }
+                if(newToStepStatus != route.ToStepPotentialState)
+                {
+                    route.ToStepPotentialState = newToStepStatus;
+                    ChangeMade = true;
+                }
+            }
+            if (ChangeMade)
+            {
+                depth ++;
+                PopulateRouteAndStepState(routes, ref depth);
+            }
+        }
+
+        private void GetRoutesDotString(List<RouteItem> routes, StringBuilder builder)
+        {
+            foreach (RouteItem route in routes)
+            {
+                string edgeStyle = null;
+                if (route.RouteStatus == RouteStatus.NotCurrent)
+                    edgeStyle = "style=dotted, color=black";
+                else if (route.RouteStatus == RouteStatus.Allows)
+                    edgeStyle = "style=solid, color=green";
+                else if (route.RouteStatus == RouteStatus.True)
+                    edgeStyle = "style=solid, color=red";
+                else if (route.RouteStatus == RouteStatus.False)
+                    edgeStyle = "style=solid, color=black";
+                else if (route.RouteStatus == RouteStatus.Null)
+                    edgeStyle = "style=solid, color=yellow";
+                else if (route.RouteStatus == RouteStatus.UnParsed)
+                    edgeStyle = "style=solid, color=gray";
+                if (edgeStyle != null)
+                {
+                    builder.Append($"edge [{edgeStyle}];\"{route.FromStepId}\"->\"{route.ToStepId}\";");
+                }
+            }
+        }
+
+        private void GetStepsDotString(List<RouteItem> routes, StringBuilder builder)
+        {
+            var uniqueSteps = routes.Select(r => (r.FromStepId, r.FromStepTypeId, r.FromStepName.ProcessName(), r.FromStepTypeId == 1 ? "" : r.FromStepTypeName.ProcessName(), r.FromStepHouseName, r.FromStepCurrentState, r.FromStepPotentialState)).
+                Union(routes.Select(r => (r.ToStepId, r.ToStepTypeId, r.ToStepName.ProcessName(), r.ToStepTypeId == 1 ? "" : r.ToStepTypeName.ProcessName(), r.ToStepHouseName, r.ToStepCurrentState, r.ToStepPotentialState))).Distinct().ToArray();
+
+            foreach ((int id, int typeId, string stepName, string stepTypeName, string houseName, StepCurrentState currentState, StepPotentialState potentialState) in uniqueSteps)
+            {
+                string tempStr = "";
+                string shape = null;
+                string fillcolor = null;
+                switch (currentState)
+                {
+                    case StepCurrentState.Happened:
+                        shape = "ellipse";
+                        break;
+                    case StepCurrentState.ScheduledToHappen:
+                        shape = "rect";
+                        break;
+                    case StepCurrentState.WithoutDate:
+                        shape = "trapezium";
+                        break;
+                    case StepCurrentState.NotActualised:
+                        shape = "parallelogram";
+                        break;
+                }
+
+                switch (potentialState)
+                {
+                    case StepPotentialState.AllowedToBeActualised:
+                        fillcolor = "green";
+                        break;
+                    case StepPotentialState.CausedToBeActualised:
+                        fillcolor = "yellow";
+                        break;
+                    case StepPotentialState.NotActualisable:
+                        fillcolor = "orange";
+                        break;
+                    case StepPotentialState.UnParsed:
+                        fillcolor = "gray";
+                        break;
+                }
+
+                if (currentState == StepCurrentState.NonBusinessStep)
+                {
+                    tempStr = $"\"{id}\" [label=\"{stepName}{stepTypeName}({houseName})\", style=dotted];";
+                }
+                else
+                {
+                    tempStr = $"\"{id}\" [label=\"{stepName}{stepTypeName}({houseName})\", style=\"filled,bold\",shape={shape},fillcolor={fillcolor}];";
+                }
+
+                builder.Append(tempStr.Replace("()", ""));
+            }
+        }
+
+        private void GetLegend(bool showLegend, StringBuilder builder)
+        {
+            if (showLegend == true)
+            {
+                var str = @"  subgraph cluster_01 { 
+    label = ""Legend"";
+    key [label=<<table border=""0"" cellpadding=""2"" cellspacing=""0"" cellborder=""0"">
+      <tr><td align=""right"" port=""i1"">Allows</td></tr>
+      <tr><td align=""right"" port=""i2"">True</td></tr>
+      <tr><td align=""right"" port=""i3"">False</td></tr>
+      <tr><td align=""right"" port=""i4"">Null</td></tr>
+      <tr><td align=""right"" port=""i5"">Not Current</td></tr>
+      <tr><td align=""right"" port=""i6"">Unparsed</td></tr>
+      </table>>]
+    key2 [label=<<table border=""0"" cellpadding=""2"" cellspacing=""0"" cellborder=""0"">
+      <tr><td port=""i1"">&nbsp;</td></tr>
+      <tr><td port=""i2"">&nbsp;</td></tr>
+      <tr><td port=""i3"">&nbsp;</td></tr>
+      <tr><td port=""i4"">&nbsp;</td></tr>
+      <tr><td port=""i5"">&nbsp;</td></tr>
+      <tr><td port=""i6"">&nbsp;</td></tr>
+      </table>>]
+    key:i1:e -> key2:i1:w [color=green]
+    key:i2:e -> key2:i2:w [color=red]
+    key:i3:e -> key2:i3:w [color=black]
+    key:i4:e -> key2:i4:w [color=yellow]
+    key:i5:e -> key2:i5:w [color=black, style=dotted]
+    key:i6:e -> key2:i6:w [color=gray]
+    
+    happened [shape=ellipse, label= ""Happened""] ;
+    scheduledToHappen [shape=rect, label= ""ScheduledToHappen""] ;
+    withoutDate [shape=trapezium, label= ""WithoutDate""] ;
+    notActualised [shape=parallelogram, label= ""NotActualised""] ;
+    allowedToBeActualised [style=filled, fillcolor=""green"", label= ""AllowedToBeActualised"", color=""white""] ;
+    causedToBeActualised [style=filled, fillcolor=""yellow"", label= ""CausedToBeActualised"", color=""white""] ;
+    notActualisable [style=filled, fillcolor=""orange"", label= ""NotActualisable"", color=""white""] ;
+    unParsed [style=filled, fillcolor=""gray"", label= ""UnParsed"", color=""white""] ;
+    { rank = source; key key2}
+  }
+";
+                builder.Append(str.Replace("\n", "").Replace("\r", ""));
+            }
+        }
+
         private string GiveMeDotString(int workPackageId, bool showLegend)
+        {
+            WorkPackageItem workPackage = getWorkPackage(workPackageId);
+            if (workPackage.Id != 0)
+            {
+                List<BusinessItem> businessItemList = getAllBusinessItems(workPackageId);
+                int[] actualizedStepIds = businessItemList
+                .SelectMany(bi => bi.ActualisesProcedureStep.Select(s => s.StepId))
+                .ToArray();
+                BusinessItemStep[] actualizedSteps = businessItemList
+                .SelectMany(bi => bi.ActualisesProcedureStep).Distinct()
+                .ToArray();
+
+                int procedureId = workPackage.ProcedureId;
+                List<RouteItem> routes = getAllRoutes(procedureId);
+
+                if (routes.Any())
+                {
+                    StringBuilder builder = new StringBuilder("graph[fontname=\"calibri\"];node[fontname=\"calibri\"];edge[fontname=\"calibri\"];");
+
+                    foreach (RouteItem route in routes)
+                    {
+                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
+                        {
+                            route.RouteStatus = RouteStatus.NotCurrent;
+                        }
+                        else
+                        {
+                            route.RouteStatus = RouteStatus.UnParsed;
+                        }
+                    }
+
+                    SetRouteStepState(routes, actualizedStepIds, businessItemList);
+
+                    int depth = 0;
+                    PopulateRouteAndStepState(routes.Where(route => route.RouteStatus != RouteStatus.NotCurrent), ref depth);
+
+                    GetRoutesDotString(routes, builder);
+
+                    GetStepsDotString(routes, builder);
+
+                    GetLegend(showLegend, builder);
+
+                    builder.Insert(0, "digraph{node [shape=plaintext] ");
+                    builder.Append("}");
+
+                    return builder.ToString();
+                }
+                else
+                {
+                    return string.Empty;
+                }
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+
+        private string GiveMeDotStringOld(int workPackageId, bool showLegend)
         {
             WorkPackageItem workPackage = getWorkPackage(workPackageId);
             if (workPackage.Id != 0)
@@ -86,11 +477,11 @@ namespace Procedure.Web.Controllers
                             if (routeStartDate <= fromStepMaxDate && routeEndDate >= fromStepMinDate && routeStartDate <= toStepMaxDate && routeEndDate >= toStepMinDate)
                             {
                                 routesWithActualizedFromSteps.Add(route);
-                                if (route.RouteKind == RouteType.Precludes)
-                                {
-                                    if (toStepMinDate > fromStepMaxDate)
-                                        redAlertStepIds.Add(route.ToStepId);
-                                }
+                                //if (route.RouteKind == RouteType.Precludes)
+                                //{
+                                //    if (toStepMinDate > fromStepMaxDate)
+                                //        redAlertStepIds.Add(route.ToStepId);
+                                //}
                             }
                         }
                         else
@@ -122,24 +513,24 @@ namespace Procedure.Web.Controllers
 
                 foreach (RouteItem route in routesWithActualizedFromSteps)
                 {
-                    if (nonSelfReferencedRoutesWithBothEndsActualized.Contains(route) || (!blackOutToStepsIds.Contains(route.ToStepId) && !new[] { RouteType.Precludes, RouteType.Requires }.Contains(route.RouteKind)))
+                    if (nonSelfReferencedRoutesWithBothEndsActualized.Contains(route) || (!blackOutToStepsIds.Contains(route.ToStepId)))// && !new[] { RouteType.Precludes, RouteType.Requires }.Contains(route.RouteKind)))
                     {
-                        if (route.RouteKind == RouteType.Causes)
-                        {
+                        //if (route.RouteKind == RouteType.Causes)
+                        //{
                             builder.Append($"\"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Causes\"]; ");
-                        }
-                        if (route.RouteKind == RouteType.Allows)
-                        {
-                            builder.Append($"edge [color=red]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Allows\"]; edge [color=black];");
-                        }
-                        if (route.RouteKind == RouteType.Precludes)
-                        {
-                            builder.Append($"edge [color=blue]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Precludes\"]; edge [color=black];");
-                        }
-                        if (route.RouteKind == RouteType.Requires)
-                        {
-                            builder.Append($"edge [color=yellow]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Requires\"]; edge [color=black];");
-                        }
+                        //}
+                        //if (route.RouteKind == RouteType.Allows)
+                        //{
+                        //    builder.Append($"edge [color=red]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Allows\"]; edge [color=black];");
+                        //}
+                        //if (route.RouteKind == RouteType.Precludes)
+                        //{
+                        //    builder.Append($"edge [color=blue]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Precludes\"]; edge [color=black];");
+                        //}
+                        //if (route.RouteKind == RouteType.Requires)
+                        //{
+                        //    builder.Append($"edge [color=yellow]; \"{route.FromStepId}\" -> \"{route.ToStepId}\" [label = \"Requires\"]; edge [color=black];");
+                        //}
                     }
                     if (!blackOutFromStepIds.Except(unBlackOut).Contains(route.FromStepId) && !blackOutToStepsIds.Contains(route.ToStepId) && !new[] { RouteType.Precludes, RouteType.Requires }.Contains(route.RouteKind))
                     {

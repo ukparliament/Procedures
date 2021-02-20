@@ -70,55 +70,61 @@ namespace Procedure.Web.Controllers
                 {
                     string edgeStyle = null;
                     string label = null;
-                    if (route.RouteKind == RouteType.Causes)
-                    {
-                        label = "Causes";
-                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
-                            edgeStyle = "style=dotted, color=black";
-                        else
-                            edgeStyle = "style=solid, color=black";
-                    }
-                    else if (route.RouteKind == RouteType.Allows)
-                    {
-                        label = "Allows";
-                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
-                            edgeStyle = "style=dotted, color=red";
-                        else
-                            edgeStyle = "style=solid, color=red";
-                    }
-                    else if (route.RouteKind == RouteType.Precludes)
-                    {
-                        label = "Precludes";
-                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
-                            edgeStyle = "style=dotted, color=blue";
-                        else
-                            edgeStyle = "style=solid, color=blue";
-                    }
-                    else if (route.RouteKind == RouteType.Requires)
-                    {
-                        label = "Requires";
-                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
-                            edgeStyle = "style=dotted, color=yellow";
-                        else
-                            edgeStyle = "style=solid, color=yellow";
-                    }
+                    label = "";
+                    if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
+                        edgeStyle = "style=dotted, color=black";
+                    else
+                        edgeStyle = "style=solid, color=black";
                     if (edgeStyle != null && label != null)
-                        builder.Append($"edge [{edgeStyle}];\"{route.FromStepName.ProcessName()}({route.FromStepHouseName})\"->\"{route.ToStepName.ProcessName()}({route.ToStepHouseName})\"[label=\"{label}\"];edge[style=solid, color=black];");
+                    {
+                        builder.Append($"edge [{edgeStyle}];\"{route.FromStepId}\"->\"{route.ToStepId}\"[label=\"{label}\"];edge[style=solid, color=black];");
+                    }
                 }
 
-                if(showLegend == true)
+                var allStepIds = routes.Select(r => (r.FromStepId, r.FromStepTypeId, r.FromStepName.ProcessName(), r.FromStepTypeId == 1 ? "": r.FromStepTypeName.ProcessName(), r.FromStepHouseName)).
+                    Union(routes.Select(r => (r.ToStepId, r.ToStepTypeId, r.ToStepName.ProcessName(), r.ToStepTypeId == 1 ? "" : r.ToStepTypeName.ProcessName(), r.ToStepHouseName))).Distinct().ToArray();
+                foreach ((int id, int typeId, string stepName, string stepTypeName, string houseName) in allStepIds)
+                {
+                    string tempStr;
+                    if (typeId == 1)
+                    {
+                        tempStr = $"\"{id}\" [label=\"{stepName}{stepTypeName}({houseName})\", style=bold];";
+                    }
+                    else
+                    {
+                        tempStr = $"\"{id}\" [label=\"{stepName}{stepTypeName}({houseName})\", style=dotted];";
+
+                    }
+                    builder.Append(tempStr.Replace("()", ""));
+                }
+
+
+                if (showLegend == true)
                 {
                     builder.Append("subgraph cluster_key {" +
-                   "label=\"Key\"; labeljust=\"l\";" +
-                   "k1[label=\"Step\"]; node [shape=plaintext];" +
-                   "k3[label=<<table border=\"0\" cellpadding=\"2\" cellspacing=\"0\" cellborder=\"0\"> " +
-                   "<tr><td align=\"right\" port=\"i1\"> Causes </td></tr>" +
-                   "<tr><td align=\"right\" port=\"i2\"> Allows </td></tr>" +
-                   "<tr><td align=\"right\" port=\"i3\"> Precludes </td></tr>" +
-                   "<tr><td align=\"right\" port=\"i4\"> Requires </td></tr> </table>>];" +
-                   "k3e [label =<<table border=\"0\" cellpadding=\"2\" cellspacing=\"0\" cellborder=\"0\">" +
-                   "<tr><td port=\"i1\" > &nbsp;</td></tr> <tr><td port=\"i2\"> &nbsp;</td></tr> <tr><td port=\"i3\"> &nbsp;</td></tr> <tr><td port=\"i4\"> &nbsp;</td></tr> </table>>];" +
-                   "k3:i1:e->k3e:i1:w k3:i2:e-> k3e:i2:w [color=red] k3:i3:e->k3e:i3:w [color = blue] k3:i4:e->k3e:i4:w [color=yellow]  { rank = same; k3 k3e k1 } };");
+                        "label = \"Key\" ; labeljust=\"l\";" +
+                        "shape = rectangle;" +
+                        "color = black;" +
+                        "k3[label=<<table border=\"0\" cellpadding=\"2\" cellspacing=\"0\" cellborder=\"0\"> " +
+                        "<tr><td align=\"right\" port=\"i1\"> Open (current) route </td></tr>" +
+                        "<tr><td align=\"right\" port=\"i2\"> Closed (non-current) route </td></tr>" +
+                        "</table>>];" +
+
+                        "k3e [label =<<table border=\"0\" cellpadding=\"2\" cellspacing=\"0\" cellborder=\"0\">" +
+                        "<tr><td port=\"i1\" > &nbsp;</td></tr> <tr><td port=\"i2\"> &nbsp;</td></tr> " +
+                        "</table>>];" +
+                        "k3:i1:e->k3e:i1:w k3:i2:e-> k3e:i2:w [style=dotted]" +
+
+                        "\"Business step\" -> ee [style=invis];" +
+                        "\"Non-business step\" ->f [style=invis];" +
+                        "\"Business step\" [style = solid];" +
+                        "\"Non-business step\" [style = dotted];" +
+                        "ee[style = invis];" +
+                        "f[style = invis];" +
+                        "k3[shape = plaintext];" +
+                        "k3e[style = invis];" +
+                        "{ rank = same; k3 k3e}" +
+                        "}");
                 }
 
                 builder.Insert(0, "digraph{");
@@ -130,8 +136,6 @@ namespace Procedure.Web.Controllers
             {
                 return string.Empty;
             }
-
-            
         }
 
 

@@ -164,6 +164,9 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\BaseSharepointItem.cs" />
+    <Compile Include="Models\StepPotentialState.cs" />
+    <Compile Include="Models\StepCurrentState.cs" />
+    <Compile Include="Models\RouteStatus.cs" />
     <Compile Include="Models\BusinessItem.cs" />
     <Compile Include="Models\BusinessItemStep.cs" />
     <Compile Include="Models\GraphVizViewModel.cs" />
