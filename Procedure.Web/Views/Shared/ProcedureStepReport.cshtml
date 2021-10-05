@@ -7,206 +7,252 @@
     <section>
         <div class="container">
             <div class="block--border">
-                <h2>@Model.WorkPackage.Title</h2>
-                <h3>@Model.WorkPackage.TripleStoreId</h3>
-                <h3>An <a href="@Model.WorkPackage.WorkPackageableThingURL">instrument</a> subject to the @Model.WorkPackage.ProcedureName procedure.</h3>
+                <h1>@Model.WorkPackage.Title (@Model.WorkPackage.TripleStoreId)</h1>
+                <p>An <a href="@Model.WorkPackage.WorkPackageableThingURL">instrument</a> subject to the @Model.WorkPackage.ProcedureName procedure.</p>
 
-                <h2>Things that have happened</h2>
-                <h3>Steps actualised with business items having a date in the past, or today:</h3>
-                @if (Model.HappenedBusinessItems.Any())
-                {
-                    <ul class="list--details">
-                        @foreach (BusinessItem bi in Model.HappenedBusinessItems)
-                        {
-                            <li class="block--transparent">
-                                @if (bi.Date != null)
-                                {
-                                    <span><p>@bi.Date.GetValueOrDefault().ToString("yyyy-MM-dd")</p></span>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(bi.WeblinkText))
-                                {
-                                    <span><p><a href="@bi.Weblink">@bi.WeblinkText</a></p></span>
-                                }
-                                @foreach (BusinessItemStep step in bi.ActualisesProcedureStep)
-                                {
-                                    <span><p>@step.StepName</p></span>
-                                    <span><p>@step.HouseName</p></span>
-                                }
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span><p>There are no steps actualised with business items having in the past, or today.</p></span>
-                }
-
-                <h2>Things that are scheduled to happen</h2>
-                <h3>Steps actualised with business items having a date in the future:</h3>
-                @if (Model.ScheduledToHappenBusinessItems.Any())
-                {
-                    <ul class="list--details">
-                        @foreach (BusinessItem bi in Model.ScheduledToHappenBusinessItems)
-                        {
-                            <li class="block--transparent">
-                                @if (bi.Date != null)
-                                {
-                                    <span><p>@bi.Date.GetValueOrDefault().ToString("yyyy-MM-dd")</p></span>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(bi.WeblinkText))
-                                {
-                                    <span><p><a href="@bi.Weblink">@bi.WeblinkText</a></p></span>
-                                }
-                                @foreach (BusinessItemStep step in bi.ActualisesProcedureStep)
-                                {
-                                    <span><p>@step.StepName</p></span>
-                                    <span><p>@step.HouseName</p></span>
-                                }
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span><p>There are no steps actualised with business items having a date in the future.</p></span>
-                }
-
-                <h2>Things that may have happened or may be scheduled to happen</h2>
-                <h3>Steps actualised with business items having no date:</h3>
-                @if (Model.MayHappenBusinessItems.Any())
-                {
-                    <ul class="list--details">
-                        @foreach (BusinessItem bi in Model.MayHappenBusinessItems)
-                        {
-                            <li class="block--transparent">
-                                @if (bi.Date != null)
-                                {
-                                    <span><p>@bi.Date.GetValueOrDefault().ToString("yyyy-MM-dd")</p></span>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(bi.WeblinkText))
-                                {
-                                    <span><p><a href="@bi.Weblink">@bi.WeblinkText</a></p></span>
-                                }
-                                @foreach (BusinessItemStep step in bi.ActualisesProcedureStep)
-                                {
-                                    <span><p>@step.StepName</p></span>
-                                    <span><p>@step.HouseName</p></span>
-                                }
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span><p>There are no steps actualised with business items having no date.</p></span>
-                }
-
-                <h2>Things that should happen</h2>
-                <h3>Steps with an input of TRUE once the procedure map has been parsed:</h3>
-                @if (Model.CausedToBeActualisedSteps.Any())
-                {
-                    <ul class="list--details">
-                        @foreach (StepItem step in Model.CausedToBeActualisedSteps)
-                        {
-                            <li class="block--transparent">
-                                <span><p>@step.Description</p></span>
-                                <span><p>@step.Houses.First().HouseName</p></span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span><p>There are no steps that should happen.</p></span>
-                }
-
-                <h2>Things that may happen</h2>
-                <h3>Steps with an input of ALLOWS once the procedure map has been parsed:</h3>
-                @if (Model.AllowedToBeActualisedSteps.Any())
-                {
-                    <ul class="list--details">
-                        @foreach (StepItem step in Model.AllowedToBeActualisedSteps)
-                        {
-                            <li class="block--transparent">
-                                <span><p>@step.Description</p></span>
-                                <span><p>@step.Houses.First().HouseName</p></span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span><p>There are no steps that may happen.</p></span>
-                }
-
-                <h2>Things that should not now happen</h2>
-                <h3>Steps with an input of UNTRAVSERSABLE once the procedure map has been parsed:</h3>
-                @if (Model.UntraversableSteps.Any())
-                {
-                    <ul class="list--details">
-                        @foreach (StepItem step in Model.UntraversableSteps)
-                        {
-                            <li class="block--transparent">
-                                <span><p>@step.Description</p></span>
-                                <span><p>@step.Houses.First().HouseName</p></span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span><p>There are no steps that should not yet happen.</p></span>
-                }
-
-                <h2>Things that should not yet happen</h2>
-                <h3>Steps with an input of NULL or FALSE once the procedure map has been parsed:</h3>
-                @if (Model.NotYetActualisedSteps.Any())
-                {
-                    <ul class="list--details">
-                        @foreach (StepItem step in Model.NotYetActualisedSteps)
-                        {
-                            <li class="block--transparent">
-                                <span><p>@step.Description</p></span>
-                                <span><p>@step.Houses.First().HouseName</p></span>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <span><p>There are no steps that should not yet happen.</p></span>
-                }
-
-                <h2>Parsed routes</h2>
-                @if (Model.ParsedRoutes.Any())
-                {
-                    <table>
-                        <thead>
-                            <tr>
-                                <td>ID</td>
-                                <td>Source step</td>
-                                <td>Target step</td>
-                                <td>Parse pass count</td>
-                                <td>Status</td>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (ParsedRoute route in Model.ParsedRoutes)
+                <div id="happened">
+                    <h2>Things that have happened</h2>
+                    <details>
+                        <summary>Steps actualised with business items having a date in the past, or today: </summary>
+                        <section>
+                            @if (Model.HappenedBusinessItems.Any())
                             {
-                            <tr>
-                                <td>@route.Id</td>
-                                <td>@route.FromStepName</td>
-                                <td>@route.ToStepName</td>
-                                <td>@route.Iteration</td>
-                                <td>@route.Status</td>
-                            </tr>
+                                <ul class="list--details">
+                                    @foreach (BusinessItem bi in Model.HappenedBusinessItems)
+                                    {
+                                        <li class="block--transparent">
+                                            @if (bi.Date != null)
+                                            {
+                                                <span><p>@bi.Date.GetValueOrDefault().ToString("yyyy-MM-dd")</p></span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(bi.WeblinkText))
+                                            {
+                                                <span><p><a href="@bi.Weblink">@bi.WeblinkText</a></p></span>
+                                            }
+                                            @foreach (BusinessItemStep step in bi.ActualisesProcedureStep)
+                                            {
+                                                <span><p>@step.StepName</p></span>
+                                                <span><p>@step.HouseName</p></span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
                             }
-                        </tbody>
-                    </table>
-                }
+                            else
+                            {
+                                <span><p>There are no steps actualised with business items having in the past, or today.</p></span>
+                            }
+                        </section>
+                    </details>
+                </div>
+                <div id="scheduledtohappen">
+                    <h2>Things that are scheduled to happen</h2>
+                    <details>
+                        <summary>Steps actualised with business items having a date in the future:</summary>
+                        <section>
+                            @if (Model.ScheduledToHappenBusinessItems.Any())
+                            {
+                                <ul class="list--details">
+                                    @foreach (BusinessItem bi in Model.ScheduledToHappenBusinessItems)
+                                    {
+                                        <li class="block--transparent">
+                                            @if (bi.Date != null)
+                                            {
+                                                <span><p>@bi.Date.GetValueOrDefault().ToString("yyyy-MM-dd")</p></span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(bi.WeblinkText))
+                                            {
+                                                <span><p><a href="@bi.Weblink">@bi.WeblinkText</a></p></span>
+                                            }
+                                            @foreach (BusinessItemStep step in bi.ActualisesProcedureStep)
+                                            {
+                                                <span><p>@step.StepName</p></span>
+                                                <span><p>@step.HouseName</p></span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span><p>There are no steps actualised with business items having a date in the future.</p></span>
+                            }
+                        </section>
+                    </details>
+                </div>
 
+                <div id="nodate">
+                    <h2>Things that may have happened or may be scheduled to happen</h2>
+                    <details>
+                        <summary>>Steps actualised with business items having no date: </summary>
+                        <section>
+                            @if (Model.MayHappenBusinessItems.Any())
+                            {
+                                <ul class="list--details">
+                                    @foreach (BusinessItem bi in Model.MayHappenBusinessItems)
+                                    {
+                                        <li class="block--transparent">
+                                            @if (bi.Date != null)
+                                            {
+                                                <span><p>@bi.Date.GetValueOrDefault().ToString("yyyy-MM-dd")</p></span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(bi.WeblinkText))
+                                            {
+                                                <span><p><a href="@bi.Weblink">@bi.WeblinkText</a></p></span>
+                                            }
+                                            @foreach (BusinessItemStep step in bi.ActualisesProcedureStep)
+                                            {
+                                                <span><p>@step.StepName</p></span>
+                                                <span><p>@step.HouseName</p></span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span><p>There are no steps actualised with business items having no date.</p></span>
+                            }
+                        </section>
+                    </details>
+                </div>
+
+                <div id="shouldhappen">
+                    <h2>Things that should happen</h2>
+                    <details>
+                        <summary>Steps with an input of TRUE once the procedure map has been parsed: </summary>
+                        <section>
+                            @if (Model.CausedToBeActualisedSteps.Any())
+                            {
+                                <ul class="list--details">
+                                    @foreach (StepItem step in Model.CausedToBeActualisedSteps)
+                                    {
+                                        <li class="block--transparent">
+                                            <span><p>@step.Description</p></span>
+                                            <span><p>@step.Houses.First().HouseName</p></span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span><p>There are no steps that should happen.</p></span>
+                            }
+                        </section>
+                    </details>
+                </div>
+
+                <div id="mayhappen">
+                    <h2>Things that may happen</h2>
+                    <details>
+                        <summary>Steps with an input of ALLOWS once the procedure map has been parsed: </summary>
+                        <section>
+                            @if (Model.AllowedToBeActualisedSteps.Any())
+                            {
+                                <ul class="list--details">
+                                    @foreach (StepItem step in Model.AllowedToBeActualisedSteps)
+                                    {
+                                        <li class="block--transparent">
+                                            <span><p>@step.Description</p></span>
+                                            <span><p>@step.Houses.First().HouseName</p></span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span><p>There are no steps that may happen.</p></span>
+                            }
+                        </section>
+                    </details>
+                </div>
+
+                <div id="untraversable">
+                    <h2>Things that should not now happen</h2>
+                    <details>
+                        <summary>>Steps with an input of UNTRAVSERSABLE once the procedure map has been parsed: </summary>
+                        <section>
+                            @if (Model.UntraversableSteps.Any())
+                            {
+                                <ul class="list--details">
+                                    @foreach (StepItem step in Model.UntraversableSteps)
+                                    {
+                                        <li class="block--transparent">
+                                            <span><p>@step.Description</p></span>
+                                            <span><p>@step.Houses.First().HouseName</p></span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span><p>There are no steps that should not yet happen.</p></span>
+                            }
+                        </section>
+                    </details>
+                </div>
+
+                <div id="notyethappen">
+                    <h2>Things that should not yet happen</h2>
+                    <details>
+                        <summary>Steps with an input of NULL or FALSE once the procedure map has been parsed: </summary>
+                        <section>
+                            @if (Model.NotYetActualisedSteps.Any())
+                            {
+                                <ul class="list--details">
+                                    @foreach (StepItem step in Model.NotYetActualisedSteps)
+                                    {
+                                        <li class="block--transparent">
+                                            <span><p>@step.Description</p></span>
+                                            <span><p>@step.Houses.First().HouseName</p></span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span><p>There are no steps that should not yet happen.</p></span>
+                            }
+                        </section>
+                    </details>
+                </div>
+
+                <div id="happened">
+                    <h2>Parsed routes</h2>
+                    <details>
+                        <summary>Parsing log for routes: </summary>
+                        <section>
+                            @if (Model.ParsedRoutes.Any())
+                            {
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <td>ID</td>
+                                            <td>Source step</td>
+                                            <td>Target step</td>
+                                            <td>Parse pass count</td>
+                                            <td>Status</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (ParsedRoute route in Model.ParsedRoutes)
+                                        {
+                                            <tr>
+                                                <td>@route.Id</td>
+                                                <td>@route.FromStepName</td>
+                                                <td>@route.ToStepName</td>
+                                                <td>@route.Iteration</td>
+                                                <td>@route.Status</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                        </section>
+                    </details>
+                </div>
             </div>
-        </div>
+            </div>
     </section>
 }
 
