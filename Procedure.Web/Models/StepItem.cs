@@ -9,6 +9,7 @@ namespace Procedure.Web.Models
 
         public string Description { get; set; }
 
+        public int StepTypeId { get; set; }
         public IEnumerable<ProcedureStepHouse> Houses { get; set; }
 
         public ProcedureStep GiveMeMappedObject(string tripleStoreId)

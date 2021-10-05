@@ -164,6 +164,7 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Models\BaseSharepointItem.cs" />
+    <Compile Include="Models\ParsedRoute.cs" />
     <Compile Include="Models\StepPotentialState.cs" />
     <Compile Include="Models\StepCurrentState.cs" />
     <Compile Include="Models\RouteStatus.cs" />
@@ -183,6 +184,7 @@
     <Compile Include="Models\StepDetailViewModel.cs" />
     <Compile Include="Models\StepHouse.cs" />
     <Compile Include="Models\StepItem.cs" />
+    <Compile Include="Models\WorkPackageStepReportViewModel.cs" />
     <Compile Include="Models\WorkPackageDetailViewModel.cs" />
     <Compile Include="Models\WorkPackageItem.cs" />
     <Compile Include="Models\WorkPackageRouteTree.cs" />
@@ -226,6 +228,7 @@
     <Content Include="Views\Procedures\Tree.cshtml" />
     <Content Include="Views\Shared\GraphViz.cshtml" />
     <Content Include="Views\WorkPackagesGraphViz\Index.cshtml" />
+    <Content Include="Views\Shared\ProcedureStepReport.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config">

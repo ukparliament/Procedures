@@ -6,7 +6,7 @@ namespace Procedure.Web.Models
 {
     public enum RouteStatus
     {
-        NotCurrent,
+        UNTRAVSERSABLE,
         UnParsed,
         True,
         False,

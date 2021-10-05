@@ -42,6 +42,14 @@ namespace Procedure.Web.Controllers
             return View(viewmodel);
         }
 
+        [Route("{id:int}/stepreport")]
+        public ActionResult ProcedureStepReport(int id)
+        {
+            var viewmodel = GenerateProcedureStepReport(id);
+
+            return View(viewmodel);
+        }
+
         [Route("{id:int}/graph.dot")]
         public ContentResult GraphDot(int id)
         {
@@ -56,7 +64,7 @@ namespace Procedure.Web.Controllers
                 if (actualizedStepIds.Contains(StepId))
                 {
                     var bItems = businessItemList.Where(bi => bi.ActualisesProcedureStep.Select(step => step.StepId).Contains(StepId));
-                    if (bItems.Count() == 1 && bItems.First().Date == null && bItems.First().LayingDate == null)
+                    if (bItems.Count() == 1 && bItems.First().Date == null)
                     {
                         stepCurrentState = StepCurrentState.WithoutDate;
                     }
@@ -65,7 +73,7 @@ namespace Procedure.Web.Controllers
                         stepCurrentState = StepCurrentState.ScheduledToHappen;
                         foreach (var bItem in bItems)
                         {
-                            if ((bItem.Date != null && bItem.Date <= DateTime.Today) || (bItem.Date == null && bItem.LayingDate <= DateTime.Today))
+                            if ((bItem.Date != null && bItem.Date <= DateTime.Today) || (bItem.Date == null))
                             {
                                 stepCurrentState = StepCurrentState.Happened;
                                 break;
@@ -96,8 +104,9 @@ namespace Procedure.Web.Controllers
             }
         }
 
-        private void PopulateRouteAndStepState(IEnumerable<RouteItem> routes, ref int depth)
+        private List<ParsedRoute> PopulateRouteAndStepState(IEnumerable<RouteItem> routes, ref int depth)
         {
+            List<ParsedRoute> parsedRoutes = new List<ParsedRoute>();
             bool ChangeMade = false;
             foreach (var route in routes)
             {
@@ -235,7 +244,7 @@ namespace Procedure.Web.Controllers
                     }
                     else if (route.RouteStatus == RouteStatus.Null || route.RouteStatus == RouteStatus.False)
                     {
-                        newToStepStatus = StepPotentialState.NotActualisable;
+                        newToStepStatus = StepPotentialState.NotYetActualisable;
                     }
                 }
 
@@ -243,6 +252,8 @@ namespace Procedure.Web.Controllers
                 {
                     route.RouteStatus = newRouteStatus;
                     ChangeMade = true;
+                    ParsedRoute pr = new ParsedRoute() { FromStepName = route.FromStepName, ToStepName = route.ToStepName, Status = Enum.GetName(typeof(RouteStatus), newRouteStatus), Id = route.Id, Iteration = depth };
+                    parsedRoutes.Add(pr);
                 }
                 if(newToStepStatus != route.ToStepPotentialState)
                 {
@@ -253,8 +264,9 @@ namespace Procedure.Web.Controllers
             if (ChangeMade)
             {
                 depth ++;
-                PopulateRouteAndStepState(routes, ref depth);
+                parsedRoutes.AddRange(PopulateRouteAndStepState(routes, ref depth));
             }
+            return parsedRoutes;
         }
 
         private void GetRoutesDotString(List<RouteItem> routes, StringBuilder builder)
@@ -262,7 +274,7 @@ namespace Procedure.Web.Controllers
             foreach (RouteItem route in routes)
             {
                 string edgeStyle = null;
-                if (route.RouteStatus == RouteStatus.NotCurrent)
+                if (route.RouteStatus == RouteStatus.UNTRAVSERSABLE)
                     edgeStyle = "style=dotted, color=black";
                 else if (route.RouteStatus == RouteStatus.Allows)
                     edgeStyle = "style=solid, color=green";
@@ -315,7 +327,7 @@ namespace Procedure.Web.Controllers
                     case StepPotentialState.CausedToBeActualised:
                         fillcolor = "yellow";
                         break;
-                    case StepPotentialState.NotActualisable:
+                    case StepPotentialState.NotYetActualisable:
                         fillcolor = "orange";
                         break;
                     case StepPotentialState.UnParsed:
@@ -380,6 +392,143 @@ namespace Procedure.Web.Controllers
             }
         }
 
+        private WorkPackageStepReportViewModel GenerateProcedureStepReport(int workPackageId)
+        {
+            WorkPackageStepReportViewModel model = new WorkPackageStepReportViewModel();
+
+            WorkPackageItem workPackage = getWorkPackage(workPackageId);
+            model.WorkPackage = workPackage;
+
+            if (workPackage.Id != 0)
+            {
+                IEnumerable<StepItem> stepList = getAllSteps(workPackage.ProcedureId);
+                IEnumerable<StepItem> businessStepList = stepList.Where(s => s.StepTypeId == 1);
+
+                IEnumerable<BusinessItem> businessItemList = getAllBusinessItems(workPackageId);
+                BusinessItemStep[] actualizedSteps = businessItemList
+                .SelectMany(bi => bi.ActualisesProcedureStep).Distinct()
+                .ToArray();
+
+                List<BusinessItem> happenedBusinessItems = new List<BusinessItem>();
+                List<BusinessItem> scheduledToHappenBusinessItems = new List<BusinessItem>();
+                List<BusinessItem> mayHappenBusinessItems = new List<BusinessItem>();
+                foreach (var bi in businessItemList.OrderBy(b => b.Date))
+                {
+                    if (!string.IsNullOrWhiteSpace(bi.Weblink))
+                    {
+                        bi.WeblinkText = new Uri(bi.Weblink).Host;
+                    }
+                    foreach (var step in bi.ActualisesProcedureStep)
+                    {
+                        step.HouseName = stepList.Single(s => s.Id == step.StepId).Houses.First().HouseName;
+                        if (step.HouseName.Contains(","))
+                            step.HouseName = "House of Commons and House of Lords";
+                        else if (string.IsNullOrWhiteSpace(step.HouseName))
+                            step.HouseName = "Neither House";
+                    }
+                    if (bi.Date <= DateTime.Now)
+                        happenedBusinessItems.Add(bi);
+                    else if (bi.Date > DateTime.Now)
+                        scheduledToHappenBusinessItems.Add(bi);
+                    else
+                        mayHappenBusinessItems.Add(bi);
+                }
+
+                model.HappenedBusinessItems = happenedBusinessItems;
+                model.ScheduledToHappenBusinessItems = scheduledToHappenBusinessItems;
+                model.MayHappenBusinessItems = mayHappenBusinessItems;
+
+                List<RouteItem> routes = getAllRoutes(workPackage.ProcedureId);
+
+                if (routes.Any())
+                {
+                    foreach (RouteItem route in routes)
+                    {
+                        if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
+                        {
+                            route.RouteStatus = RouteStatus.UNTRAVSERSABLE;
+                        }
+                        else
+                        {
+                            route.RouteStatus = RouteStatus.UnParsed;
+                        }
+                    }
+
+                    int[] actualizedStepIds = businessItemList
+                        .SelectMany(bi => bi.ActualisesProcedureStep.Select(s => s.StepId))
+                        .ToArray();
+                    SetRouteStepState(routes, actualizedStepIds, businessItemList.ToList());
+
+                    int depth = 0;
+                    var parsedRoutes = PopulateRouteAndStepState(routes.Where(route => route.RouteStatus != RouteStatus.UNTRAVSERSABLE), ref depth);
+                    List<StepItem> causedToBeActualisedSteps = new List<StepItem>();
+                    List<StepItem> allowedToBeActualisedSteps = new List<StepItem>();
+                    List<StepItem> notYetActualisedSteps = new List<StepItem>();
+                    foreach (RouteItem route in routes)
+                    {
+                        switch (route.FromStepPotentialState)
+                        {
+                            case (StepPotentialState.CausedToBeActualised):
+                                if (!causedToBeActualisedSteps.Select(s => s.Id).Contains(route.FromStepId))
+                                {
+                                    causedToBeActualisedSteps.Add(stepList.Single(s => s.Id == route.FromStepId));
+                                }
+                                break;
+                            case (StepPotentialState.AllowedToBeActualised):
+                                if (!allowedToBeActualisedSteps.Select(s => s.Id).Contains(route.FromStepId))
+                                {
+                                    allowedToBeActualisedSteps.Add(stepList.Single(s => s.Id == route.FromStepId));
+                                }
+                                break;
+                            case (StepPotentialState.NotYetActualisable):
+                                if (!notYetActualisedSteps.Select(s => s.Id).Contains(route.FromStepId))
+                                {
+                                    notYetActualisedSteps.Add(stepList.Single(s => s.Id == route.FromStepId));
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+
+                        switch (route.ToStepPotentialState)
+                        {
+                            case (StepPotentialState.CausedToBeActualised):
+                                if (!causedToBeActualisedSteps.Select(s => s.Id).Contains(route.ToStepId))
+                                {
+                                    causedToBeActualisedSteps.Add(stepList.Single(s => s.Id == route.ToStepId));
+                                }
+                                break;
+                            case (StepPotentialState.AllowedToBeActualised):
+                                if (!allowedToBeActualisedSteps.Select(s => s.Id).Contains(route.ToStepId))
+                                {
+                                    allowedToBeActualisedSteps.Add(stepList.Single(s => s.Id == route.ToStepId));
+                                }
+                                break;
+                            case (StepPotentialState.NotYetActualisable):
+                                if (!notYetActualisedSteps.Select(s => s.Id).Contains(route.ToStepId))
+                                {
+                                    notYetActualisedSteps.Add(stepList.Single(s => s.Id == route.ToStepId));
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    model.AllowedToBeActualisedSteps = allowedToBeActualisedSteps.Where(x => !actualizedStepIds.Contains(x.Id)).ToList();
+                    model.CausedToBeActualisedSteps = causedToBeActualisedSteps.Where(x => !actualizedStepIds.Contains(x.Id)).ToList();
+                    model.NotYetActualisedSteps = notYetActualisedSteps.Where(x => !actualizedStepIds.Contains(x.Id)).ToList();
+                    model.UntraversableSteps = stepList.Where(s => s.StepTypeId == 1)
+                                                        .Except(model.AllowedToBeActualisedSteps)
+                                                        .Except(model.CausedToBeActualisedSteps)
+                                                        .Except(model.NotYetActualisedSteps)
+                                                        .Where(x=>!actualizedStepIds.Contains(x.Id))
+                                                        .ToList();
+                    model.ParsedRoutes = parsedRoutes;
+                }
+            }
+            return model;
+        }
+
         private string GiveMeDotString(int workPackageId, bool showLegend)
         {
             WorkPackageItem workPackage = getWorkPackage(workPackageId);
@@ -404,7 +553,7 @@ namespace Procedure.Web.Controllers
                     {
                         if ((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now))
                         {
-                            route.RouteStatus = RouteStatus.NotCurrent;
+                            route.RouteStatus = RouteStatus.UNTRAVSERSABLE;
                         }
                         else
                         {
@@ -415,7 +564,7 @@ namespace Procedure.Web.Controllers
                     SetRouteStepState(routes, actualizedStepIds, businessItemList);
 
                     int depth = 0;
-                    PopulateRouteAndStepState(routes.Where(route => route.RouteStatus != RouteStatus.NotCurrent), ref depth);
+                    PopulateRouteAndStepState(routes.Where(route => route.RouteStatus != RouteStatus.UNTRAVSERSABLE), ref depth);
 
                     GetRoutesDotString(routes, builder);
 

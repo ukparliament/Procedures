@@ -1,10 +1,16 @@
-﻿namespace Procedure.Web.Models
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace Procedure.Web.Models
 {
     public class BusinessItemStep
     {
         public int BusinessItemId { get; set; }
         public int StepId { get; set; }
         public string StepName { get; set; }
+        public DateTimeOffset? ActualisedDate { get; set; }
+        public string HouseName { get; set; }
 
         public static string ListByWorkPackageSql = @"select bi.Id as BusinessItemId,
                 ps.Id as StepId, ps.ProcedureStepName as StepName

@@ -4,7 +4,8 @@
     {
         AllowedToBeActualised,
         CausedToBeActualised,
-        NotActualisable,
+        NotYetActualisable,
+        NotCurrentlyActualisable,
         UnParsed
     }
 }

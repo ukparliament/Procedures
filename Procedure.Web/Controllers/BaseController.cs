@@ -134,6 +134,7 @@ namespace Procedure.Web.Controllers
             List<BusinessItem> businessItemList = GetSqlList<BusinessItem>(BusinessItem.ListByWorkPackageSql, new { WorkPackageId = workPackageId });
             List<BusinessItemStep> steps = GetSqlList<BusinessItemStep>(BusinessItemStep.ListByWorkPackageSql, new { WorkPackageId = workPackageId });
             businessItemList.ForEach(bi => bi.ActualisesProcedureStep = steps.Where(s => s.BusinessItemId == bi.Id).ToList());
+            businessItemList.ForEach(bi => bi.ActualisesProcedureStep.ForEach(step => step.ActualisedDate = bi.Date));
 
             return businessItemList;
         }
@@ -152,6 +153,45 @@ namespace Procedure.Web.Controllers
                 });
 
             return routesAndSteps.Item1;
+        }
+
+        protected List<StepItem> getAllSteps(int procedureId)
+        {
+            List<RouteItem> routes = getAllRoutes(procedureId);
+            List<StepItem> steps = new List<StepItem>();
+            foreach (var route in routes)
+            {
+                if (!((route.StartDate != null && route.StartDate > DateTime.Now) || (route.EndDate != null && route.EndDate < DateTime.Now)))
+                {
+                    if (!steps.Select(s => s.Id).Contains(route.FromStepId))
+                    {
+                        StepItem step = new StepItem();
+                        step.Id = route.FromStepId;
+                        step.StepTypeId = route.FromStepTypeId;
+                        step.Description = route.FromStepName;
+                        if (route.FromStepHouseName != null)
+                        {
+                            step.Houses = new List<ProcedureStepHouse>() { new ProcedureStepHouse() { HouseName = route.FromStepHouseName, ProcedureStepId = route.FromStepId } }; ;
+                        }
+                        step.TripleStoreId = route.FromStepTripleStoreId;
+                        steps.Add(step);
+                    }
+                    if (!steps.Select(s => s.Id).Contains(route.ToStepId))
+                    {
+                        StepItem step = new StepItem();
+                        step.Id = route.ToStepId;
+                        step.StepTypeId = route.ToStepTypeId;
+                        step.Description = route.ToStepName;
+                        if (route.ToStepHouseName != null)
+                        {
+                            step.Houses = new List<ProcedureStepHouse>() { new ProcedureStepHouse() { HouseName = route.ToStepHouseName, ProcedureStepId = route.ToStepId } }; ;
+                        }
+                        step.TripleStoreId = route.ToStepTripleStoreId;
+                        steps.Add(step);
+                    }
+                }
+            }
+            return steps;
         }
 
     }
