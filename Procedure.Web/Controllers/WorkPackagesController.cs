@@ -420,10 +420,16 @@ namespace Procedure.Web.Controllers
                     }
                     foreach (var step in bi.ActualisesProcedureStep)
                     {
-                        step.HouseName = stepList.Single(s => s.Id == step.StepId).Houses.First().HouseName;
-                        if (step.HouseName.Contains(","))
-                            step.HouseName = "House of Commons and House of Lords";
-                        else if (string.IsNullOrWhiteSpace(step.HouseName))
+                        if (stepList.SingleOrDefault(s => s.Id == step.StepId)!= null && 
+                            stepList.SingleOrDefault(s => s.Id == step.StepId).Houses.FirstOrDefault() != null)
+                        {
+                            step.HouseName = stepList.Single(s => s.Id == step.StepId).Houses.FirstOrDefault().HouseName;
+                            if (step.HouseName.Contains(","))
+                                step.HouseName = "House of Commons and House of Lords";
+                            else if (string.IsNullOrWhiteSpace(step.HouseName))
+                                step.HouseName = "Neither House";
+                        }
+                        else
                             step.HouseName = "Neither House";
                     }
                     if (bi.Date <= DateTime.Now)
