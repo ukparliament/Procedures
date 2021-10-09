@@ -252,7 +252,11 @@ namespace Procedure.Web.Controllers
                 {
                     route.RouteStatus = newRouteStatus;
                     ChangeMade = true;
-                    ParsedRoute pr = new ParsedRoute() { FromStepName = route.FromStepName, ToStepName = route.ToStepName, Status = Enum.GetName(typeof(RouteStatus), newRouteStatus), Id = route.Id, Iteration = depth+1 };
+                    ParsedRoute pr = new ParsedRoute() { FromStepName = route.FromStepTypeId!=1 ? route.FromStepName + " " + route.FromStepTypeName: route.FromStepName, 
+                                                        ToStepName = route.ToStepTypeId != 1 ? route.ToStepName + " " + route.ToStepTypeName : route.ToStepName,
+                        Status = Enum.GetName(typeof(RouteStatus), newRouteStatus), 
+                                                        Id = route.Id, 
+                                                        Iteration = depth+1 };
                     parsedRoutes.Add(pr);
                 }
                 if(newToStepStatus != route.ToStepPotentialState)

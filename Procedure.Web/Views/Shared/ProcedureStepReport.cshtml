@@ -11,7 +11,7 @@
                 <p>An <a href="@Model.WorkPackage.WorkPackageableThingURL">instrument</a> subject to the @Model.WorkPackage.ProcedureName procedure.</p>
 
                 <div id="happened">
-                    <h2>Things that have happened</h2>
+                    <h2>Things that have happened (@Model.HappenedBusinessItems.Count())</h2>
                     <details>
                         <summary>Steps actualised with business items having a date in the past, or today: </summary>
                         <section>
@@ -46,7 +46,7 @@
                     </details>
                 </div>
                 <div id="scheduledtohappen">
-                    <h2>Things that are scheduled to happen</h2>
+                    <h2>Things that are scheduled to happen (@Model.ScheduledToHappenBusinessItems.Count())</h2>
                     <details>
                         <summary>Steps actualised with business items having a date in the future:</summary>
                         <section>
@@ -82,7 +82,7 @@
                 </div>
 
                 <div id="nodate">
-                    <h2>Things that may have happened or may be scheduled to happen</h2>
+                    <h2>Things that may have happened or may be scheduled to happen (@Model.MayHappenBusinessItems.Count())</h2>
                     <details>
                         <summary>Steps actualised with business items having no date: </summary>
                         <section>
@@ -118,7 +118,7 @@
                 </div>
 
                 <div id="shouldhappen">
-                    <h2>Things that should happen</h2>
+                    <h2>Things that should happen (@Model.CausedToBeActualisedSteps.Count())</h2>
                     <details>
                         <summary>Steps with an input of TRUE once the procedure map has been parsed: </summary>
                         <section>
@@ -143,7 +143,7 @@
                 </div>
 
                 <div id="mayhappen">
-                    <h2>Things that may happen</h2>
+                    <h2>Things that may happen (@Model.AllowedToBeActualisedSteps.Count())</h2>
                     <details>
                         <summary>Steps with an input of ALLOWS once the procedure map has been parsed: </summary>
                         <section>
@@ -168,9 +168,9 @@
                 </div>
 
                 <div id="untraversable">
-                    <h2>Things that should not now happen</h2>
+                    <h2>Things that should not now happen (@Model.UntraversableSteps.Count())</h2>
                     <details>
-                        <summary>>Steps with an input of UNTRAVSERSABLE once the procedure map has been parsed: </summary>
+                        <summary>Steps with an input of UNTRAVERSABLE once the procedure map has been parsed: </summary>
                         <section>
                             @if (Model.UntraversableSteps.Any())
                             {
@@ -186,14 +186,14 @@
                             }
                             else
                             {
-                                <span><p>There are no steps that should not yet happen.</p></span>
+                                <span><p>There are no steps that should not now happen.</p></span>
                             }
                         </section>
                     </details>
                 </div>
 
                 <div id="notyethappen">
-                    <h2>Things that should not yet happen</h2>
+                    <h2>Things that should not yet happen (@Model.NotYetActualisedSteps.Count())</h2>
                     <details>
                         <summary>Steps with an input of NULL or FALSE once the procedure map has been parsed: </summary>
                         <section>
@@ -218,7 +218,7 @@
                 </div>
 
                 <div id="happened">
-                    <h2>Parsed routes</h2>
+                    <h2>Parsed routes (@Model.ParsedRoutes.Count() entries)</h2>
                     <details>
                         <summary>Parsing log for routes: </summary>
                         <section>
