@@ -108,14 +108,22 @@ namespace Procedure.Web.Controllers
         {
             List<ParsedRoute> parsedRoutes = new List<ParsedRoute>();
             bool ChangeMade = false;
-            foreach (var route in routes)
+            foreach (var route in routes.Where(route => route.RouteStatus != RouteStatus.UNTRAVSERSABLE))
             {
                 RouteStatus newRouteStatus = route.RouteStatus;
+                StepPotentialState newFromStepStatus = route.FromStepPotentialState;
                 StepPotentialState newToStepStatus = route.ToStepPotentialState;
 
                 if (route.FromStepTypeId == 1) // business step
                 {
-                    if (route.FromStepCurrentState == StepCurrentState.Happened)
+                    var inputRoute = routes.Single(r => r.ToStepId == route.FromStepId);
+
+                    if (inputRoute.RouteStatus == RouteStatus.UNTRAVSERSABLE)
+                    {
+                        newRouteStatus = RouteStatus.UNTRAVSERSABLE;
+                        newFromStepStatus = StepPotentialState.NotCurrentlyActualisable;
+                    }
+                    else if (route.FromStepCurrentState == StepCurrentState.Happened)
                     {
                         newRouteStatus = RouteStatus.True;
                     }
@@ -127,13 +135,30 @@ namespace Procedure.Web.Controllers
                     {
                         newRouteStatus = RouteStatus.Null;
                     }
+
+                    if (inputRoute.RouteStatus == RouteStatus.False || inputRoute.RouteStatus == RouteStatus.Null)
+                    {
+                        newFromStepStatus = StepPotentialState.NotYetActualisable;
+                    }
+                    else if (inputRoute.RouteStatus == RouteStatus.True)
+                    {
+                        newFromStepStatus = StepPotentialState.CausedToBeActualised;
+                    }
+                    else if (inputRoute.RouteStatus == RouteStatus.Allows)
+                    {
+                        newFromStepStatus = StepPotentialState.AllowedToBeActualised;
+                    }
                 }
                 else if (route.FromStepTypeId == 4) // AND step
                 {
                     var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
                     if (inputRoutes.Count() == 2)
                     {
-                        if (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.True)
+                        if (inputRoutes[0].RouteStatus == RouteStatus.UNTRAVSERSABLE || inputRoutes[1].RouteStatus == RouteStatus.UNTRAVSERSABLE)
+                        {
+                            newRouteStatus = RouteStatus.UNTRAVSERSABLE;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.True)
                         {
                             newRouteStatus = RouteStatus.True;
                         }
@@ -165,7 +190,11 @@ namespace Procedure.Web.Controllers
                     var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
                     if (inputRoutes.Count() == 2)
                     {
-                        if (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.True)
+                        if (inputRoutes[0].RouteStatus == RouteStatus.UNTRAVSERSABLE || inputRoutes[1].RouteStatus == RouteStatus.UNTRAVSERSABLE)
+                        {
+                            newRouteStatus = RouteStatus.UNTRAVSERSABLE;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.True && inputRoutes[1].RouteStatus == RouteStatus.True)
                         {
                             newRouteStatus = RouteStatus.True;
                         }
@@ -199,7 +228,11 @@ namespace Procedure.Web.Controllers
                     var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
                     if (inputRoutes.Count() == 1)
                     {
-                        if (inputRoutes[0].RouteStatus == RouteStatus.True)
+                        if (inputRoutes[0].RouteStatus == RouteStatus.UNTRAVSERSABLE)
+                        {
+                            newRouteStatus = RouteStatus.UNTRAVSERSABLE;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.True)
                         {
                             newRouteStatus = RouteStatus.False;
                         }
@@ -218,7 +251,11 @@ namespace Procedure.Web.Controllers
                     var inputRoutes = routes.Where(r => r.ToStepId == route.FromStepId).ToList();
                     if (inputRoutes.Count() == 1)
                     {
-                        if (inputRoutes[0].RouteStatus == RouteStatus.True)
+                        if (inputRoutes[0].RouteStatus == RouteStatus.UNTRAVSERSABLE)
+                        {
+                            newRouteStatus = RouteStatus.UNTRAVSERSABLE;
+                        }
+                        else if (inputRoutes[0].RouteStatus == RouteStatus.True)
                         {
                             newRouteStatus = RouteStatus.Allows;
                         }
@@ -234,17 +271,22 @@ namespace Procedure.Web.Controllers
                 }
                 if (route.ToStepTypeId == 1)//business step
                 {
-                    if (route.RouteStatus == RouteStatus.True)
+                    if (route.RouteStatus == RouteStatus.True || newRouteStatus == RouteStatus.True)
                     {
                         newToStepStatus = StepPotentialState.CausedToBeActualised;
                     }
-                    else if (route.RouteStatus == RouteStatus.Allows)
+                    else if (route.RouteStatus == RouteStatus.Allows || newRouteStatus == RouteStatus.Allows)
                     {
                         newToStepStatus = StepPotentialState.AllowedToBeActualised;
                     }
-                    else if (route.RouteStatus == RouteStatus.Null || route.RouteStatus == RouteStatus.False)
+                    else if (route.RouteStatus == RouteStatus.Null || route.RouteStatus == RouteStatus.False ||
+                        newRouteStatus == RouteStatus.Null || newRouteStatus == RouteStatus.False)
                     {
                         newToStepStatus = StepPotentialState.NotYetActualisable;
+                    }
+                    else if (newRouteStatus == RouteStatus.UNTRAVSERSABLE)
+                    {
+                        newToStepStatus = StepPotentialState.NotCurrentlyActualisable;
                     }
                 }
 
@@ -262,6 +304,11 @@ namespace Procedure.Web.Controllers
                 if(newToStepStatus != route.ToStepPotentialState)
                 {
                     route.ToStepPotentialState = newToStepStatus;
+                    ChangeMade = true;
+                }
+                if (newFromStepStatus != route.FromStepPotentialState)
+                {
+                    route.FromStepPotentialState = newFromStepStatus;
                     ChangeMade = true;
                 }
             }
@@ -336,6 +383,9 @@ namespace Procedure.Web.Controllers
                         break;
                     case StepPotentialState.UnParsed:
                         fillcolor = "gray";
+                        break;
+                    case StepPotentialState.NotCurrentlyActualisable:
+                        fillcolor = "black";
                         break;
                 }
 
@@ -470,10 +520,12 @@ namespace Procedure.Web.Controllers
                     SetRouteStepState(routes, actualizedStepIds, businessItemList.ToList());
 
                     int depth = 0;
-                    var parsedRoutes = PopulateRouteAndStepState(routes.Where(route => route.RouteStatus != RouteStatus.UNTRAVSERSABLE), ref depth);
+                    var parsedRoutes = PopulateRouteAndStepState(routes, ref depth);
+                    //.Where(route => route.RouteStatus != RouteStatus.UNTRAVSERSABLE)
                     List<StepItem> causedToBeActualisedSteps = new List<StepItem>();
                     List<StepItem> allowedToBeActualisedSteps = new List<StepItem>();
                     List<StepItem> notYetActualisedSteps = new List<StepItem>();
+                    List<StepItem> notCurrentlyActualisableSteps = new List<StepItem>();
                     foreach (RouteItem route in routes)
                     {
                         switch (route.FromStepPotentialState)
@@ -494,6 +546,12 @@ namespace Procedure.Web.Controllers
                                 if (!notYetActualisedSteps.Select(s => s.Id).Contains(route.FromStepId))
                                 {
                                     notYetActualisedSteps.Add(stepList.Single(s => s.Id == route.FromStepId));
+                                }
+                                break;
+                            case (StepPotentialState.NotCurrentlyActualisable):
+                                if (!notCurrentlyActualisableSteps.Select(s => s.Id).Contains(route.FromStepId))
+                                {
+                                    notCurrentlyActualisableSteps.Add(stepList.Single(s => s.Id == route.FromStepId));
                                 }
                                 break;
                             default:
@@ -520,6 +578,12 @@ namespace Procedure.Web.Controllers
                                     notYetActualisedSteps.Add(stepList.Single(s => s.Id == route.ToStepId));
                                 }
                                 break;
+                            case (StepPotentialState.NotCurrentlyActualisable):
+                                if (!notCurrentlyActualisableSteps.Select(s => s.Id).Contains(route.ToStepId))
+                                {
+                                    notCurrentlyActualisableSteps.Add(stepList.Single(s => s.Id == route.ToStepId));
+                                }
+                                break;
                             default:
                                 break;
                         }
@@ -527,12 +591,13 @@ namespace Procedure.Web.Controllers
                     model.AllowedToBeActualisedSteps = allowedToBeActualisedSteps.Where(x => !actualizedStepIds.Contains(x.Id)).ToList();
                     model.CausedToBeActualisedSteps = causedToBeActualisedSteps.Where(x => !actualizedStepIds.Contains(x.Id)).ToList();
                     model.NotYetActualisedSteps = notYetActualisedSteps.Where(x => !actualizedStepIds.Contains(x.Id)).ToList();
-                    model.UntraversableSteps = stepList.Where(s => s.StepTypeId == 1)
-                                                        .Except(model.AllowedToBeActualisedSteps)
-                                                        .Except(model.CausedToBeActualisedSteps)
-                                                        .Except(model.NotYetActualisedSteps)
-                                                        .Where(x=>!actualizedStepIds.Contains(x.Id))
-                                                        .ToList();
+                    model.UntraversableSteps = notCurrentlyActualisableSteps.Where(x => !actualizedStepIds.Contains(x.Id)).ToList();
+                    //stepList.Where(s => s.StepTypeId == 1).Where(x=>x.)
+                    //                                    .Except(model.AllowedToBeActualisedSteps)
+                    //                                    .Except(model.CausedToBeActualisedSteps)
+                    //                                    .Except(model.NotYetActualisedSteps)
+                    //                                    .Where(x=>!actualizedStepIds.Contains(x.Id))
+                    //                                    .ToList();
                     model.ParsedRoutes = parsedRoutes;
                 }
             }
@@ -574,7 +639,7 @@ namespace Procedure.Web.Controllers
                     SetRouteStepState(routes, actualizedStepIds, businessItemList);
 
                     int depth = 0;
-                    PopulateRouteAndStepState(routes.Where(route => route.RouteStatus != RouteStatus.UNTRAVSERSABLE), ref depth);
+                    PopulateRouteAndStepState(routes, ref depth);
 
                     GetRoutesDotString(routes, builder);
 
