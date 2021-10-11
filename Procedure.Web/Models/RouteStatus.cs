@@ -11,6 +11,7 @@ namespace Procedure.Web.Models
         True,
         False,
         Null,
-        Allows
+        Allows,
+        Parsed
     }
 }

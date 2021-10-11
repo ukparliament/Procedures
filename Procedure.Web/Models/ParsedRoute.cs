@@ -10,5 +10,6 @@ namespace Procedure.Web.Models
         public string ToStepName { get; set; }
         public int Iteration { get; set; }
         public string Status { get; set; }
+        public int ActualisationCount { get; set; }
     }
 }

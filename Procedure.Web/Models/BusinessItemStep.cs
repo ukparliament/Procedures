@@ -11,6 +11,7 @@ namespace Procedure.Web.Models
         public string StepName { get; set; }
         public DateTimeOffset? ActualisedDate { get; set; }
         public string HouseName { get; set; }
+        public int ActualisationCount { get; set; }
 
         public static string ListByWorkPackageSql = @"select bi.Id as BusinessItemId,
                 ps.Id as StepId, ps.ProcedureStepName as StepName
