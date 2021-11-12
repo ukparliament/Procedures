@@ -571,10 +571,10 @@ namespace Procedure.Web.Controllers
                 {
                     route.RouteStatus = RouteStatus.UnParsed;
                 }
-                if (actualizedSteps.SingleOrDefault(step => step.StepId == route.FromStepId) != null)
-                    route.FromStepActualisationCount = actualizedSteps.SingleOrDefault(step => step.StepId == route.FromStepId).ActualisationCount;
-                if (actualizedSteps.SingleOrDefault(step => step.StepId == route.ToStepId) != null)
-                    route.ToStepActualisationCount = actualizedSteps.SingleOrDefault(step => step.StepId == route.ToStepId).ActualisationCount;
+                if (actualizedSteps.FirstOrDefault(step => step.StepId == route.FromStepId) != null)
+                    route.FromStepActualisationCount = actualizedSteps.FirstOrDefault(step => step.StepId == route.FromStepId).ActualisationCount;
+                if (actualizedSteps.FirstOrDefault(step => step.StepId == route.ToStepId) != null)
+                    route.ToStepActualisationCount = actualizedSteps.FirstOrDefault(step => step.StepId == route.ToStepId).ActualisationCount;
             }
 
             int[] actualizedStepIds = businessItemList
