@@ -11,7 +11,7 @@ namespace Procedure.Web.Models
 
         public int ActualisationCount { get; set; }
         public int FromStepId { get; set; }
-        public int FromStepActualisationCount { get; set; }
+        //public int FromStepActualisationCount { get; set; }
         public int FromStepTypeId { get; set; }
 
         public StepCurrentState FromStepCurrentState { get; set; }
@@ -24,7 +24,7 @@ namespace Procedure.Web.Models
         public string FromStepHouseName { get; set; }
 
         public int ToStepId { get; set; }
-        public int ToStepActualisationCount { get; set; }
+        //public int ToStepActualisationCount { get; set; }
         public int ToStepTypeId { get; set; }
         public string ToStepTripleStoreId { get; set; }
         public StepCurrentState ToStepCurrentState { get; set; }

@@ -130,11 +130,11 @@ namespace Procedure.Web.Controllers
                     }
                     else if (route.FromStepCurrentState == StepCurrentState.ScheduledToHappen || route.FromStepCurrentState == StepCurrentState.WithoutDate)
                     {
-                        newRouteStatus = RouteStatus.Null;
+                        newRouteStatus = RouteStatus.False; //RouteStatus.Null;
                     }
                     else if (route.FromStepCurrentState == StepCurrentState.NotActualised)
                     {
-                        newRouteStatus = RouteStatus.Null;
+                        newRouteStatus = RouteStatus.False; //RouteStatus.Null;
                     }
 
                     if (inputRoute != null)
@@ -285,7 +285,7 @@ namespace Procedure.Web.Controllers
                         else if (inputRoutes[0].RouteStatus != RouteStatus.UnParsed && inputRoutes[1].RouteStatus != RouteStatus.UnParsed)
                         {
                             newRouteStatus = RouteStatus.Parsed;
-                            newActualisationCount = inputRoutes[0].FromStepActualisationCount + inputRoutes[1].FromStepActualisationCount;
+                            newActualisationCount = inputRoutes[0].ActualisationCount + inputRoutes[1].ActualisationCount;
                         }
                     }
                 }
@@ -301,7 +301,7 @@ namespace Procedure.Web.Controllers
                         else if (inputRoutes[0].RouteStatus != RouteStatus.UnParsed)
                         {
                             newRouteStatus = RouteStatus.Parsed;
-                            newActualisationCount = inputRoutes[0].FromStepActualisationCount + 1;
+                            newActualisationCount = inputRoutes[0].ActualisationCount + 1;
                         }
                     }
                 }
@@ -316,7 +316,7 @@ namespace Procedure.Web.Controllers
                         }
                         else if (inputRoutes[0].RouteStatus != RouteStatus.UnParsed && inputRoutes[1].RouteStatus != RouteStatus.UnParsed)
                         {
-                            if (inputRoutes[0].FromStepActualisationCount == inputRoutes[1].FromStepActualisationCount)
+                            if (inputRoutes[0].ActualisationCount == inputRoutes[1].ActualisationCount)
                                 newRouteStatus = RouteStatus.True;
                             else
                                 newRouteStatus = RouteStatus.False;
@@ -329,7 +329,7 @@ namespace Procedure.Web.Controllers
                     if (inputRoutes.Count() == 1)
                     {
                         newRouteStatus = inputRoutes[0].RouteStatus;
-                        newActualisationCount = inputRoutes[0].FromStepActualisationCount;
+                        newActualisationCount = inputRoutes[0].ActualisationCount;
                     }
                 }
 
@@ -572,9 +572,9 @@ namespace Procedure.Web.Controllers
                     route.RouteStatus = RouteStatus.UnParsed;
                 }
                 if (actualizedSteps.FirstOrDefault(step => step.StepId == route.FromStepId) != null)
-                    route.FromStepActualisationCount = actualizedSteps.FirstOrDefault(step => step.StepId == route.FromStepId).ActualisationCount;
-                if (actualizedSteps.FirstOrDefault(step => step.StepId == route.ToStepId) != null)
-                    route.ToStepActualisationCount = actualizedSteps.FirstOrDefault(step => step.StepId == route.ToStepId).ActualisationCount;
+                    route.ActualisationCount = actualizedSteps.FirstOrDefault(step => step.StepId == route.FromStepId).ActualisationCount;
+                //if (actualizedSteps.FirstOrDefault(step => step.StepId == route.ToStepId) != null)
+                //    route.ToStepActualisationCount = actualizedSteps.FirstOrDefault(step => step.StepId == route.ToStepId).ActualisationCount;
             }
 
             int[] actualizedStepIds = businessItemList
